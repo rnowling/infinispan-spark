@@ -23,7 +23,7 @@ object StreamConsumerScala {
 
    def main(args: Array[String]) {
       if (args.length < 5) {
-         System.out.println("Usage: StreamConsumerScala <twitter4j.oauth.consumerKey> <twitter4j.oauth.consumerSecret> <twitter4j.oauth.accessToken> <twitter4j.oauth.accessTokenSecret> <infinispan-server> ")
+         println("Usage: StreamConsumerScala <twitter4j.oauth.consumerKey> <twitter4j.oauth.consumerSecret> <twitter4j.oauth.accessToken> <twitter4j.oauth.accessTokenSecret> <infinispan-server> ")
          System.exit(1)
       }
 
