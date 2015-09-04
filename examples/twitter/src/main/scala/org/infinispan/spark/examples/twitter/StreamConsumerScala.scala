@@ -35,7 +35,17 @@ object StreamConsumerScala {
 
       val conf = new SparkConf().setAppName("spark-infinispan-stream-consumer-scala")
       val sparkContext = new SparkContext(conf)
-      val master = sparkContext.getConf.get("spark.master").replace("spark://", "").replaceAll(":.*", "")
+      val masterString = sparkContext.getConf.get("spark.master")
+      val master = if (masterString.startsWith("local")) {
+	"127.0.0.1"
+      } else {
+	val start = masterString.indexOf("/") + 3
+	val end = masterString.lastIndexOf(":")
+	if (end > start)
+	  masterString.substring(start, end)
+	else
+	  masterString.substring(start)
+      }
 
       val streamingContext = new StreamingContext(sparkContext, Seconds(1))
 
