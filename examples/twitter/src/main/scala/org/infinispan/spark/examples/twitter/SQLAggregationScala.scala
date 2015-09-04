@@ -23,7 +23,17 @@ object SQLAggregationScala {
       val sc = new SparkContext(conf)
 
       // Extract the value of the spark master to reuse in the infinispan configuration
-      val master = sc.getConf.get("spark.master").replace("spark://", "").replaceAll(":.*", "")
+      val masterString = sc.getConf.get("spark.master")
+      val master = if (masterString.startsWith("local")) {
+	"127.0.0.1"
+      } else {
+	val start = masterString.indexOf("/") + 3
+	val end = masterString.lastIndexOf(":")
+	if (end > start)
+	  masterString.substring(start, end)
+	else
+	  masterString.substring(start)
+      }
 
       // Populate infinispan properties
       val infinispanProperties = new Properties
