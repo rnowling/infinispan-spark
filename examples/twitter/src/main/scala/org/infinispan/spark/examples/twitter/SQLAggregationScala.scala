@@ -15,25 +15,18 @@ import org.infinispan.spark.rdd.InfinispanRDD
 object SQLAggregationScala {
 
    def main(args: Array[String]) {
+      if (args.length < 1) {
+        println("Usage: SQLAggregationScala <infinispan-server>")
+        System.exit(1)
+      }
+
       // Reduce the log level in the driver
       Logger.getLogger("org").setLevel(Level.WARN)
 
       // Create Spark Context
       val conf = new SparkConf().setAppName("spark-infinispan-rdd-aggregation-scala")
       val sc = new SparkContext(conf)
-
-      // Extract the value of the spark master to reuse in the infinispan configuration
-      val masterString = sc.getConf.get("spark.master")
-      val master = if (masterString.startsWith("local")) {
-	"127.0.0.1"
-      } else {
-	val start = masterString.indexOf("/") + 3
-	val end = masterString.lastIndexOf(":")
-	if (end > start)
-	  masterString.substring(start, end)
-	else
-	  masterString.substring(start)
-      }
+      val master = args(0)
 
       // Populate infinispan properties
       val infinispanProperties = new Properties

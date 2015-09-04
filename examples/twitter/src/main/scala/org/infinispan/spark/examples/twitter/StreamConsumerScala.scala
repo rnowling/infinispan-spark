@@ -22,8 +22,8 @@ import scala.language.postfixOps
 object StreamConsumerScala {
 
    def main(args: Array[String]) {
-      if (args.length < 4) {
-         System.out.println("Usage: StreamConsumerScala <twitter4j.oauth.consumerKey> <twitter4j.oauth.consumerSecret> <twitter4j.oauth.accessToken> twitter4j.oauth.accessTokenSecret")
+      if (args.length < 5) {
+         System.out.println("Usage: StreamConsumerScala <twitter4j.oauth.consumerKey> <twitter4j.oauth.consumerSecret> <twitter4j.oauth.accessToken> <twitter4j.oauth.accessTokenSecret> <infinispan-server> ")
          System.exit(1)
       }
 
@@ -34,34 +34,34 @@ object StreamConsumerScala {
       System.setProperty("twitter4j.oauth.accessTokenSecret", args(3))
 
       val conf = new SparkConf().setAppName("spark-infinispan-stream-consumer-scala")
+      println("Creating SparkContext")
       val sparkContext = new SparkContext(conf)
-      val masterString = sparkContext.getConf.get("spark.master")
-      val master = if (masterString.startsWith("local")) {
-	"127.0.0.1"
-      } else {
-	val start = masterString.indexOf("/") + 3
-	val end = masterString.lastIndexOf(":")
-	if (end > start)
-	  masterString.substring(start, end)
-	else
-	  masterString.substring(start)
-      }
+      val master = args(4)
 
+      println("Creating StreamingContext")
       val streamingContext = new StreamingContext(sparkContext, Seconds(1))
 
+      println("Accessing Infinispan")
       val infinispanProperties = new Properties
       infinispanProperties.put("infinispan.client.hotrod.server_list", master)
-      val remoteCacheManager = new RemoteCacheManager(new ConfigurationBuilder().withProperties(infinispanProperties).build())
+      println("Creating remote cache manager")
+      val cb = new ConfigurationBuilder().withProperties(infinispanProperties)
+      val remoteCacheManager = new RemoteCacheManager(cb.build())
+      println("Getting cache")
       val cache = remoteCacheManager.getCache[Long, Tweet]
 
+      println("Creating Twitter Stream")
       val twitterDStream = TwitterUtils.createStream(streamingContext, None)
 
       val keyValueTweetStream = twitterDStream.map {
          s => (s.getId, new Tweet(s.getId, s.getUser.getScreenName, Option(s.getPlace).map(_.getCountry).getOrElse("N/A"), s.getRetweetCount, s.getText))
       }
 
+      println("Setting write to Infinispan")
       keyValueTweetStream.writeToInfinispan(infinispanProperties)
 
+     
+      println("Creating repeat")
       Repeat.every(5 seconds, {
          val keySet = cache.keySet()
          val maxKey = keySet.max
@@ -69,8 +69,11 @@ object StreamConsumerScala {
          println(s"Last tweet:${Option(cache.get(maxKey)).map(_.getText).getOrElse("<no tweets received so far>")}")
          println()
       })
-
+      
+      
+      println("Starting stream")
       streamingContext.start()
+      println("Setting await termination")
       streamingContext.awaitTermination()
    }
 
